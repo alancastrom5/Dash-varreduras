@@ -321,6 +321,39 @@
     text-align: center;
     padding: 40px;
   }
+
+  /* SHIFT SELECTOR */
+  .shift-selector {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+
+  .shift-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 12px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: 'DM Mono', monospace;
+    font-weight: 500;
+  }
+
+  .shift-btn:hover {
+    border-color: var(--accent);
+    color: var(--text);
+  }
+
+  .shift-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #0b0f1a;
+    font-weight: 600;
+  }
 </style>
 </head>
 <body>
@@ -362,6 +395,14 @@
 
   <!-- DASHBOARD -->
   <div id="dashboard">
+
+    <!-- SHIFT SELECTOR -->
+    <div class="section-label">Filtrar por Turno</div>
+    <div class="shift-selector" id="shiftSelector">
+      <button class="shift-btn active" data-shift="all" onclick="filterByShift('all')">📅 Todos</button>
+      <button class="shift-btn" data-shift="AB" onclick="filterByShift('AB')">🌅 Turno A/B (06:00-18:00)</button>
+      <button class="shift-btn" data-shift="CD" onclick="filterByShift('CD')">🌙 Turno C/D (18:00-06:00)</button>
+    </div>
 
     <!-- KPIs -->
     <div class="section-label">Resumo Geral</div>
@@ -455,6 +496,63 @@
 <script>
 let charts = {};
 let parsedData = null;
+let currentShiftFilter = 'all';
+
+// ───── GET SHIFT ─────
+function getShift(date) {
+  if (!date) return null;
+  const h = date.getHours();
+  // A/B: 06:00 - 18:00, C/D: 18:00 - 06:00
+  if (h >= 6 && h < 18) return 'AB';
+  return 'CD';
+}
+
+function filterByShift(shift) {
+  currentShiftFilter = shift;
+  document.querySelectorAll('[data-shift]').forEach(b => b.classList.remove('active'));
+  document.querySelector(`[data-shift="${shift}"]`).classList.add('active');
+  
+  if (!parsedData) return;
+  reRenderDashboard();
+}
+
+function getFilteredData(data) {
+  if (currentShiftFilter === 'all') return data;
+  return data.filter(r => getShift(r.inicio) === currentShiftFilter);
+}
+
+function reRenderDashboard() {
+  const filtered = getFilteredData(parsedData);
+  
+  // Aggregate by date
+  const byDay = {};
+  filtered.forEach(r => {
+    const k = r.data.toISOString().split('T')[0];
+    if (!byDay[k]) byDay[k] = { label: fmtDate(r.data), conducao: 0, parado: 0, dist: 0, duracao: 0, n: 0 };
+    byDay[k].conducao += r.conducao_h;
+    byDay[k].parado   += r.parado_h;
+    byDay[k].dist     += r.distancia;
+    byDay[k].duracao  += r.duracao_h;
+    byDay[k].n++;
+  });
+  const days = Object.values(byDay).sort((a,b) => a.label.localeCompare(b.label));
+
+  // KPIs
+  const totalDist     = filtered.reduce((s,r) => s + r.distancia, 0);
+  const totalConducao = filtered.reduce((s,r) => s + r.conducao_h, 0);
+  const totalParado   = filtered.reduce((s,r) => s + r.parado_h, 0);
+
+  document.getElementById('kpiDist').textContent    = totalDist.toFixed(2) + ' km';
+  document.getElementById('kpiDriving').textContent = fmtH(totalConducao);
+  document.getElementById('kpiStopped').textContent = fmtH(totalParado);
+  document.getElementById('kpiTrips').textContent   = filtered.length;
+
+  // Render charts
+  renderChart1(days, 'bar');
+  renderChart2(days, 'pie');
+  renderChart3(days, 'bar');
+  renderTable(filtered);
+}
 
 // ───── UPLOAD ─────
 const uploadZone = document.getElementById('uploadZone');
@@ -559,6 +657,7 @@ function parseAndRender(raw, fileName) {
       conducao_h: hhmmssToHours(r[6] || '00:00:00'),
       parado_h: hhmmssToHours(r[7] || '00:00:00'),
       duracao_h: hhmmssToHours(r[8] || '00:00:00'),
+      shift: getShift(parseDate(r[2])),
     });
   }
 
