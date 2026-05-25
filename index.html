@@ -4,10 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard Varredeira — Relatório de Viagem</title>
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap');
 
@@ -22,30 +20,31 @@
     --text: #e8edf5;
     --muted: #7a8ba5;
     --danger: #ff5e7d;
+    --card-shadow: 0 4px 32px rgba(0,0,0,0.45);
   }
 
-  * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
     background: var(--bg);
     color: var(--text);
     font-family: 'DM Sans', sans-serif;
     min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at 10% 0%, rgba(245,166,35,0.07) 0%, transparent 60%),
+      radial-gradient(ellipse at 90% 100%, rgba(42,245,195,0.05) 0%, transparent 60%);
   }
 
   header {
-    padding: 24px 32px;
-    border-bottom: 1px solid var(--border);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: rgba(11,15,26,0.95);
+    padding: 28px 40px 20px;
+    border-bottom: 1px solid var(--border);
     position: sticky;
     top: 0;
+    background: rgba(11,15,26,0.92);
+    backdrop-filter: blur(12px);
     z-index: 100;
   }
 
@@ -56,205 +55,271 @@
   }
 
   .logo-icon {
-    width: 42px;
-    height: 42px;
-    border-radius: 10px;
+    width: 40px; height: 40px;
     background: var(--accent);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
   }
 
   .logo-text h1 {
     font-family: 'Syne', sans-serif;
     font-size: 18px;
     font-weight: 800;
+    letter-spacing: -0.3px;
   }
 
   .logo-text span {
     font-size: 11px;
     color: var(--muted);
     font-family: 'DM Mono', monospace;
+    letter-spacing: 1px;
+    text-transform: uppercase;
   }
 
   .badge {
     background: var(--surface2);
     border: 1px solid var(--border);
-    padding: 6px 12px;
-    border-radius: 8px;
-    font-size: 12px;
+    border-radius: 6px;
+    padding: 5px 14px;
     font-family: 'DM Mono', monospace;
+    font-size: 12px;
     color: var(--accent2);
   }
 
   main {
-    max-width: 1400px;
-    margin: auto;
-    padding: 32px;
+    max-width: 1300px;
+    margin: 0 auto;
+    padding: 36px 32px 60px;
   }
 
+  /* UPLOAD ZONE */
   .upload-zone {
     border: 2px dashed var(--border);
     border-radius: 18px;
-    padding: 60px 24px;
+    padding: 48px 32px;
     text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    margin-bottom: 36px;
     background: var(--surface);
     position: relative;
-    cursor: pointer;
-    transition: .2s;
-    margin-bottom: 32px;
   }
 
-  .upload-zone:hover {
+  .upload-zone:hover, .upload-zone.drag-over {
     border-color: var(--accent);
+    background: rgba(245,166,35,0.05);
   }
 
-  .upload-zone input {
-    position: absolute;
-    inset: 0;
-    opacity: 0;
-    cursor: pointer;
+  .upload-zone input[type="file"] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
   }
 
-  .upload-icon {
-    font-size: 48px;
-    margin-bottom: 12px;
+  .upload-icon { font-size: 48px; margin-bottom: 12px; }
+  .upload-zone h2 { font-family: 'Syne', sans-serif; font-size: 20px; margin-bottom: 6px; }
+  .upload-zone p { color: var(--muted); font-size: 13px; }
+  .upload-zone .formats {
+    display: inline-flex; gap: 8px; margin-top: 16px;
+  }
+  .upload-zone .formats span {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 4px; padding: 3px 10px; font-size: 11px;
+    font-family: 'DM Mono', monospace; color: var(--accent);
   }
 
-  .upload-zone h2 {
-    font-family: 'Syne', sans-serif;
-    margin-bottom: 8px;
-  }
-
-  .upload-zone p {
-    color: var(--muted);
-    font-size: 13px;
-  }
-
+  /* FILE INFO */
   .file-info {
     display: none;
-    align-items: center;
-    gap: 12px;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 14px 18px;
-    margin-bottom: 24px;
+    align-items: center; gap: 12px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 18px;
+    margin-bottom: 28px;
   }
-
-  .file-info.visible {
-    display: flex;
+  .file-info.visible { display: flex; }
+  .file-info .fi-icon { font-size: 24px; }
+  .file-info .fi-name { font-weight: 500; font-size: 14px; }
+  .file-info .fi-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .file-info .fi-clear {
+    margin-left: auto; background: none; border: 1px solid var(--border);
+    border-radius: 6px; color: var(--muted); padding: 5px 12px;
+    cursor: pointer; font-size: 12px; transition: color 0.15s;
   }
+  .file-info .fi-clear:hover { color: var(--danger); border-color: var(--danger); }
 
-  .fi-clear {
-    margin-left: auto;
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--muted);
-    padding: 6px 12px;
-    border-radius: 8px;
-    cursor: pointer;
-  }
-
+  /* KPI CARDS */
   .kpi-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit,minmax(220px,1fr));
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 16px;
-    margin-bottom: 24px;
+    margin-bottom: 32px;
   }
 
   .kpi-card {
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 22px;
+    border-radius: 14px;
+    padding: 22px 22px 18px;
+    position: relative;
+    overflow: hidden;
   }
 
-  .kpi-label {
-    font-size: 11px;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 10px;
-    font-family: 'DM Mono', monospace;
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
   }
 
-  .kpi-value {
-    font-size: 28px;
-    font-weight: 800;
-    font-family: 'Syne', sans-serif;
-  }
+  .kpi-card.c1::before { background: var(--accent); }
+  .kpi-card.c2::before { background: var(--accent2); }
+  .kpi-card.c3::before { background: var(--accent3); }
+  .kpi-card.c4::before { background: var(--danger); }
 
+  .kpi-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; font-family: 'DM Mono', monospace; margin-bottom: 10px; }
+  .kpi-value { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; }
+  .kpi-sub { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+  /* CHART SECTION */
   .chart-section {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 18px;
-    padding: 24px;
+    padding: 28px 28px 24px;
     margin-bottom: 24px;
   }
 
+  .chart-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
   .chart-title {
-    font-size: 18px;
     font-family: 'Syne', sans-serif;
-    margin-bottom: 18px;
+    font-size: 17px;
+    font-weight: 700;
+  }
+  .chart-title span { color: var(--muted); font-weight: 400; font-size: 13px; margin-left: 8px; font-family: 'DM Sans', sans-serif; }
+
+  /* TYPE SELECTOR */
+  .chart-type-selector {
+    display: flex; gap: 6px;
+  }
+
+  .chart-type-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 7px 16px;
+    font-size: 12px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: 'DM Sans', sans-serif;
+    display: flex; align-items: center; gap: 6px;
+  }
+
+  .chart-type-btn:hover {
+    border-color: var(--accent);
+    color: var(--text);
+  }
+
+  .chart-type-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #0b0f1a;
+    font-weight: 600;
   }
 
   .chart-container {
-    height: 350px;
+    position: relative;
+    height: 340px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
+  .chart-container canvas { max-height: 340px; }
+
+  /* TWO-COL */
   .two-col {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 24px;
+    margin-bottom: 24px;
   }
 
-  .table-wrap {
-    overflow-x: auto;
-    border-radius: 12px;
-    border: 1px solid var(--border);
+  @media (max-width: 860px) {
+    .two-col { grid-template-columns: 1fr; }
+    header { padding: 16px 20px; }
+    main { padding: 20px 16px 48px; }
   }
 
-  table {
+  /* EMPTY STATE */
+  .empty-state {
+    text-align: center;
+    padding: 60px 32px;
+    color: var(--muted);
+  }
+  .empty-state .es-icon { font-size: 52px; margin-bottom: 14px; }
+  .empty-state h3 { font-family: 'Syne', sans-serif; font-size: 18px; color: var(--text); margin-bottom: 6px; }
+  .empty-state p { font-size: 13px; }
+
+  /* TABLE */
+  .table-section {
+    margin-top: 28px;
+  }
+
+  .data-table {
     width: 100%;
     border-collapse: collapse;
-  }
-
-  th {
-    background: var(--surface2);
-    color: var(--muted);
-    font-size: 11px;
-    text-transform: uppercase;
-    padding: 12px;
-    text-align: left;
+    font-size: 12px;
     font-family: 'DM Mono', monospace;
   }
 
-  td {
-    padding: 12px;
-    border-top: 1px solid var(--border);
+  .data-table th {
+    background: var(--surface2);
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+
+  .data-table td {
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+  }
+
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .table-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid var(--border); }
+
+  .section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    margin-bottom: 14px;
+    margin-top: 4px;
+  }
+
+  #dashboard { display: none; }
+  #dashboard.visible { display: block; }
+
+  .no-data-msg {
+    color: var(--muted);
     font-size: 13px;
-  }
-
-  tr:hover td {
-    background: rgba(255,255,255,0.03);
-  }
-
-  #dashboard {
-    display: none;
-  }
-
-  #dashboard.visible {
-    display: block;
-  }
-
-  @media(max-width:900px){
-    .two-col{
-      grid-template-columns:1fr;
-    }
-
-    main{
-      padding:20px;
-    }
+    text-align: center;
+    padding: 40px;
   }
 </style>
 </head>
@@ -263,138 +328,127 @@
 <header>
   <div class="logo">
     <div class="logo-icon">🚛</div>
-
     <div class="logo-text">
       <h1>Varredeira Dashboard</h1>
-      <span>Relatório de Viagem</span>
+      <span>Relatório de Viagem · Humbtec BR</span>
     </div>
   </div>
-
-  <div class="badge" id="periodBadge">
-    Nenhum arquivo
-  </div>
+  <div class="badge" id="periodBadge">Nenhum arquivo</div>
 </header>
 
 <main>
 
+  <!-- UPLOAD -->
   <div class="upload-zone" id="uploadZone">
     <input type="file" id="fileInput" accept=".xlsx,.xls">
-
     <div class="upload-icon">📂</div>
-
-    <h2>Importar planilha</h2>
-
-    <p>Faça upload do relatório detalhado</p>
-  </div>
-
-  <div class="file-info" id="fileInfo">
-    <div>📊</div>
-
-    <div>
-      <div id="fileName"></div>
-      <small id="fileRows"></small>
+    <h2>Arraste ou clique para importar a planilha</h2>
+    <p>Faça upload do arquivo de Relatório Detalhado de Viagem</p>
+    <div class="formats">
+      <span>.xlsx</span>
+      <span>.xls</span>
     </div>
-
-    <button class="fi-clear" onclick="clearFile()">
-      Remover
-    </button>
   </div>
 
+  <!-- FILE INFO -->
+  <div class="file-info" id="fileInfo">
+    <div class="fi-icon">📊</div>
+    <div>
+      <div class="fi-name" id="fileName">—</div>
+      <div class="fi-sub" id="fileRows">—</div>
+    </div>
+    <button class="fi-clear" onclick="clearFile()">✕ Remover</button>
+  </div>
+
+  <!-- DASHBOARD -->
   <div id="dashboard">
 
+    <!-- KPIs -->
+    <div class="section-label">Resumo Geral</div>
     <div class="kpi-grid">
-
-      <div class="kpi-card">
+      <div class="kpi-card c1">
         <div class="kpi-label">Distância Total</div>
         <div class="kpi-value" id="kpiDist">—</div>
+        <div class="kpi-sub">Quilômetros percorridos</div>
       </div>
-
-      <div class="kpi-card">
-        <div class="kpi-label">Tempo Condução</div>
+      <div class="kpi-card c2">
+        <div class="kpi-label">Tempo de Condução</div>
         <div class="kpi-value" id="kpiDriving">—</div>
+        <div class="kpi-sub">Total em horas</div>
       </div>
-
-      <div class="kpi-card">
+      <div class="kpi-card c3">
         <div class="kpi-label">Tempo Parado</div>
         <div class="kpi-value" id="kpiStopped">—</div>
+        <div class="kpi-sub">Total em horas</div>
       </div>
-
-      <div class="kpi-card">
-        <div class="kpi-label">Viagens</div>
+      <div class="kpi-card c4">
+        <div class="kpi-label">Nº de Viagens</div>
         <div class="kpi-value" id="kpiTrips">—</div>
+        <div class="kpi-sub">Registros no período</div>
       </div>
-
     </div>
 
+    <!-- CHART 1: Barras por dia (com seletor de tipo) -->
     <div class="chart-section">
-      <div class="chart-title">
-        Atividade diária
+      <div class="chart-section-header">
+        <div class="chart-title">Atividade Diária <span>Km rodados e tempo de condução por dia</span></div>
+        <div class="chart-type-selector">
+          <button class="chart-type-btn active" data-chart="1" data-type="bar" onclick="switchType(1,'bar',this)">📊 Barras</button>
+          <button class="chart-type-btn" data-chart="1" data-type="line" onclick="switchType(1,'line',this)">📈 Linha</button>
+          <button class="chart-type-btn" data-chart="1" data-type="radar" onclick="switchType(1,'radar',this)">🕸️ Radar</button>
+        </div>
       </div>
-
       <div class="chart-container">
         <canvas id="chart1"></canvas>
       </div>
     </div>
 
+    <!-- CHART 2: Pizza horas por dia (com seletor de tipo) -->
     <div class="two-col">
-
       <div class="chart-section">
-        <div class="chart-title">
-          Horas Trabalhadas
+        <div class="chart-section-header">
+          <div class="chart-title">Horas Trabalhadas <span>Por semana/dia</span></div>
+          <div class="chart-type-selector">
+            <button class="chart-type-btn active" data-chart="2" data-type="pie" onclick="switchType(2,'pie',this)">🥧 Pizza</button>
+            <button class="chart-type-btn" data-chart="2" data-type="doughnut" onclick="switchType(2,'doughnut',this)">🍩 Rosca</button>
+            <button class="chart-type-btn" data-chart="2" data-type="polarArea" onclick="switchType(2,'polarArea',this)">🎯 Polar</button>
+          </div>
         </div>
-
         <div class="chart-container">
           <canvas id="chart2"></canvas>
         </div>
       </div>
 
+      <!-- CHART 3: Condução x Parado -->
       <div class="chart-section">
-        <div class="chart-title">
-          Condução vs Parado
+        <div class="chart-section-header">
+          <div class="chart-title">Condução vs Parado <span>Distribuição de tempo</span></div>
+          <div class="chart-type-selector">
+            <button class="chart-type-btn active" data-chart="3" data-type="bar" onclick="switchType(3,'bar',this)">📊 Barras</button>
+            <button class="chart-type-btn" data-chart="3" data-type="line" onclick="switchType(3,'line',this)">📈 Linha</button>
+            <button class="chart-type-btn" data-chart="3" data-type="pie" onclick="switchType(3,'pie',this)">🥧 Pizza</button>
+          </div>
         </div>
-
         <div class="chart-container">
           <canvas id="chart3"></canvas>
         </div>
       </div>
-
     </div>
 
-    <div class="chart-section">
-
-      <div class="chart-title">
-        Detalhamento das Viagens
+    <!-- TABLE -->
+    <div class="chart-section table-section">
+      <div class="chart-section-header">
+        <div class="chart-title">Detalhamento das Viagens</div>
       </div>
-
       <div class="table-wrap">
-
-        <table id="dataTable">
-
-          <thead>
-            <tr>
-              <th>Data</th>
-              <th>Ativo</th>
-              <th>Turno</th>
-              <th>Início</th>
-              <th>Fim</th>
-              <th>Condução</th>
-              <th>Parado</th>
-              <th>Duração</th>
-              <th>Distância</th>
-              <th>Vel Média</th>
-              <th>Vel Máx</th>
-            </tr>
-          </thead>
-
+        <table class="data-table" id="dataTable">
+          <thead></thead>
           <tbody></tbody>
-
         </table>
-
       </div>
-
     </div>
 
-  </div>
+  </div><!-- /dashboard -->
 
 </main>
 
@@ -402,162 +456,100 @@
 let charts = {};
 let parsedData = null;
 
+// ───── UPLOAD ─────
 const uploadZone = document.getElementById('uploadZone');
-const fileInput = document.getElementById('fileInput');
+const fileInput  = document.getElementById('fileInput');
 
-uploadZone.addEventListener('dragover', e => {
-  e.preventDefault();
-});
-
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
 uploadZone.addEventListener('drop', e => {
   e.preventDefault();
-
-  const file = e.dataTransfer.files[0];
-
-  if (file) processFile(file);
+  uploadZone.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f) processFile(f);
 });
 
 fileInput.addEventListener('change', () => {
-  if (fileInput.files[0]) {
-    processFile(fileInput.files[0]);
-  }
+  if (fileInput.files[0]) processFile(fileInput.files[0]);
 });
 
 function clearFile() {
   fileInput.value = '';
-
-  document.getElementById('dashboard')
-    .classList.remove('visible');
-
-  document.getElementById('fileInfo')
-    .classList.remove('visible');
-
+  document.getElementById('fileInfo').classList.remove('visible');
+  document.getElementById('dashboard').classList.remove('visible');
+  document.getElementById('periodBadge').textContent = 'Nenhum arquivo';
   uploadZone.style.display = '';
-
-  Object.values(charts).forEach(c => c.destroy());
+  parsedData = null;
+  Object.values(charts).forEach(c => c && c.destroy());
+  charts = {};
 }
 
+function processFile(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const data = new Uint8Array(e.target.result);
+    const wb = XLSX.read(data, { type: 'array', cellDates: true });
+    const sheetName = wb.SheetNames[0];
+    const ws = wb.Sheets[sheetName];
+    const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+    parseAndRender(raw, file.name);
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ───── PARSE ─────
 function hhmmssToHours(str) {
-  if (!str) return 0;
-
-  const p = str.split(':');
-
-  return (
-    parseInt(p[0]) +
-    parseInt(p[1]) / 60 +
-    parseInt(p[2]) / 3600
-  );
+  if (!str || typeof str !== 'string') return 0;
+  const parts = str.split(':');
+  if (parts.length < 3) return 0;
+  return parseInt(parts[0]) + parseInt(parts[1]) / 60 + parseFloat(parts[2]) / 3600;
 }
 
-function parseDate(v) {
-  if (!v) return null;
-
-  if (v instanceof Date) return v;
-
-  const d = new Date(v);
-
+function parseDate(val) {
+  if (!val) return null;
+  if (val instanceof Date) return val;
+  const d = new Date(val);
   return isNaN(d) ? null : d;
 }
 
 function fmtDate(d) {
-  return d.toLocaleDateString('pt-BR');
+  if (!d) return '—';
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 }
 
 function fmtH(h) {
   const hh = Math.floor(h);
   const mm = Math.round((h - hh) * 60);
-
   return `${hh}h ${String(mm).padStart(2,'0')}m`;
 }
 
-function getTurno(dataInicio) {
-
-  if (!dataInicio) return '—';
-
-  const hora = dataInicio.getHours();
-
-  // 06:00 até 17:59
-  if (hora >= 6 && hora < 18) {
-    return dataInicio.getDate() % 2 === 0
-      ? 'A'
-      : 'B';
-  }
-
-  // 18:00 até 05:59
-  return dataInicio.getDate() % 2 === 0
-    ? 'C'
-    : 'D';
-}
-
-function processFile(file) {
-
-  const reader = new FileReader();
-
-  reader.onload = e => {
-
-    const data = new Uint8Array(e.target.result);
-
-    const wb = XLSX.read(data, {
-      type: 'array',
-      cellDates: true
-    });
-
-    const ws = wb.Sheets[wb.SheetNames[0]];
-
-    const raw = XLSX.utils.sheet_to_json(ws, {
-      header: 1,
-      defval: null
-    });
-
-    parseAndRender(raw, file.name);
-  };
-
-  reader.readAsArrayBuffer(file);
-}
-
 function parseAndRender(raw, fileName) {
-
+  // Find header row (row with "Data")
   let headerIdx = -1;
-
   for (let i = 0; i < raw.length; i++) {
-
-    if (
-      raw[i] &&
-      raw[i].some(c =>
-        typeof c === 'string' &&
-        c.trim() === 'Data'
-      )
-    ) {
-      headerIdx = i;
-      break;
+    if (raw[i] && raw[i].some(c => typeof c === 'string' && c.trim() === 'Data')) {
+      headerIdx = i; break;
     }
   }
+  if (headerIdx < 0) { alert('Formato de planilha não reconhecido.'); return; }
 
-  if (headerIdx < 0) {
-    alert('Planilha inválida.');
-    return;
-  }
-
+  const headers = raw[headerIdx];
   const rows = [];
 
   for (let i = headerIdx + 1; i < raw.length; i++) {
-
     const r = raw[i];
-
     if (!r || !r[0]) continue;
+    const dateVal = parseDate(r[0]);
+    if (!dateVal) continue;
 
-    const data = parseDate(r[0]);
-
-    if (!data) continue;
-
-    const inicio = parseDate(r[2]);
-
+    // Col indices (based on observed structure)
+    // 0=Data, 1=Ativo, 2=Viagem Início, 3=Viagem Fim, 5=Tempo Parado%, 6=Tempo Condução, 7=Tempo Parado, 8=Duração, 10=Distância, 12=Vel Média, 13=Vel Máx
     rows.push({
-      data,
+      data: dateVal,
       ativo: r[1] || '—',
-      inicio,
+      inicio: parseDate(r[2]),
       fim: parseDate(r[3]),
-      turno: getTurno(inicio),
+      parado_pct: parseFloat(r[5]) || 0,
       conducao_str: r[6] || '00:00:00',
       parado_str: r[7] || '00:00:00',
       duracao_str: r[8] || '00:00:00',
@@ -565,200 +557,292 @@ function parseAndRender(raw, fileName) {
       vel_media: parseFloat(r[12]) || 0,
       vel_max: parseFloat(r[13]) || 0,
       conducao_h: hhmmssToHours(r[6] || '00:00:00'),
-      parado_h: hhmmssToHours(r[7] || '00:00:00')
+      parado_h: hhmmssToHours(r[7] || '00:00:00'),
+      duracao_h: hhmmssToHours(r[8] || '00:00:00'),
     });
   }
 
   parsedData = rows;
 
-  const totalDist = rows.reduce((s,r)=>s+r.distancia,0);
-  const totalCond = rows.reduce((s,r)=>s+r.conducao_h,0);
-  const totalPar = rows.reduce((s,r)=>s+r.parado_h,0);
+  // Aggregate by date
+  const byDay = {};
+  rows.forEach(r => {
+    const k = r.data.toISOString().split('T')[0];
+    if (!byDay[k]) byDay[k] = { label: fmtDate(r.data), conducao: 0, parado: 0, dist: 0, duracao: 0, n: 0 };
+    byDay[k].conducao += r.conducao_h;
+    byDay[k].parado   += r.parado_h;
+    byDay[k].dist     += r.distancia;
+    byDay[k].duracao  += r.duracao_h;
+    byDay[k].n++;
+  });
+  const days = Object.values(byDay).sort((a,b) => a.label.localeCompare(b.label));
 
-  document.getElementById('kpiDist')
-    .textContent = totalDist.toFixed(2) + ' km';
+  // KPIs
+  const totalDist     = rows.reduce((s,r) => s + r.distancia, 0);
+  const totalConducao = rows.reduce((s,r) => s + r.conducao_h, 0);
+  const totalParado   = rows.reduce((s,r) => s + r.parado_h, 0);
 
-  document.getElementById('kpiDriving')
-    .textContent = fmtH(totalCond);
+  document.getElementById('kpiDist').textContent    = totalDist.toFixed(2) + ' km';
+  document.getElementById('kpiDriving').textContent = fmtH(totalConducao);
+  document.getElementById('kpiStopped').textContent = fmtH(totalParado);
+  document.getElementById('kpiTrips').textContent   = rows.length;
 
-  document.getElementById('kpiStopped')
-    .textContent = fmtH(totalPar);
+  // Period badge
+  const dates = rows.map(r => r.data);
+  const minD = new Date(Math.min(...dates));
+  const maxD = new Date(Math.max(...dates));
+  document.getElementById('periodBadge').textContent =
+    fmtDate(minD) + ' → ' + fmtDate(maxD);
 
-  document.getElementById('kpiTrips')
-    .textContent = rows.length;
-
-  document.getElementById('fileName')
-    .textContent = fileName;
-
-  document.getElementById('fileRows')
-    .textContent = `${rows.length} viagens`;
-
-  document.getElementById('fileInfo')
-    .classList.add('visible');
-
+  // File info
+  document.getElementById('fileName').textContent = fileName;
+  document.getElementById('fileRows').textContent = rows.length + ' viagens · ' + days.length + ' dias';
+  document.getElementById('fileInfo').classList.add('visible');
   uploadZone.style.display = 'none';
 
-  document.getElementById('dashboard')
-    .classList.add('visible');
+  // Show dashboard
+  document.getElementById('dashboard').classList.add('visible');
 
-  renderCharts(rows);
+  // Render charts
+  renderChart1(days, 'bar');
+  renderChart2(days, 'pie');
+  renderChart3(days, 'bar');
   renderTable(rows);
 }
 
-function renderCharts(rows) {
+// ───── CHART COLORS ─────
+const PALETTE = [
+  '#f5a623','#2af5c3','#e05aff','#ff5e7d','#58b4ff','#ffde7d',
+  '#a0f5a6','#ff9c7d','#7db8ff','#f5e642'
+];
 
-  const byDay = {};
+const chartDefaults = {
+  plugins: { legend: { labels: { color: '#7a8ba5', font: { family: 'DM Mono', size: 11 } } } },
+  scales: {}
+};
 
-  rows.forEach(r => {
+function darkScales() {
+  return {
+    x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#7a8ba5', font: { family: 'DM Mono', size: 10 } } },
+    y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#7a8ba5', font: { family: 'DM Mono', size: 10 } } }
+  };
+}
 
-    const k = r.data.toISOString().split('T')[0];
-
-    if (!byDay[k]) {
-      byDay[k] = {
-        label: fmtDate(r.data),
-        dist: 0,
-        conducao: 0,
-        parado: 0
-      };
-    }
-
-    byDay[k].dist += r.distancia;
-    byDay[k].conducao += r.conducao_h;
-    byDay[k].parado += r.parado_h;
-  });
-
-  const days = Object.values(byDay);
-
+// ───── CHART 1: Daily Activity (km + driving) ─────
+function renderChart1(days, type) {
+  const ctx = document.getElementById('chart1');
   if (charts[1]) charts[1].destroy();
 
-  charts[1] = new Chart(
-    document.getElementById('chart1'),
+  const labels = days.map(d => d.label);
+  const isRadar = type === 'radar';
+
+  const datasets = [
     {
-      type: 'bar',
-
-      data: {
-        labels: days.map(d=>d.label),
-
-        datasets: [
-          {
-            label: 'Distância',
-            data: days.map(d=>d.dist)
-          },
-          {
-            label: 'Condução',
-            data: days.map(d=>d.conducao)
-          }
-        ]
-      },
-
-      options: {
-        responsive:true,
-        maintainAspectRatio:false
-      }
+      label: 'Distância (km)',
+      data: days.map(d => +d.dist.toFixed(2)),
+      backgroundColor: isRadar ? 'rgba(245,166,35,0.25)' : 'rgba(245,166,35,0.82)',
+      borderColor: '#f5a623',
+      borderWidth: type === 'line' ? 2 : 1,
+      fill: type === 'line' ? false : true,
+      tension: 0.4,
+      pointBackgroundColor: '#f5a623',
+    },
+    {
+      label: 'Condução (h)',
+      data: days.map(d => +d.conducao.toFixed(2)),
+      backgroundColor: isRadar ? 'rgba(42,245,195,0.25)' : 'rgba(42,245,195,0.75)',
+      borderColor: '#2af5c3',
+      borderWidth: type === 'line' ? 2 : 1,
+      fill: type === 'line' ? false : true,
+      tension: 0.4,
+      pointBackgroundColor: '#2af5c3',
     }
-  );
+  ];
 
+  charts[1] = new Chart(ctx, {
+    type,
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: '#7a8ba5', font: { family: 'DM Mono', size: 11 } } }
+      },
+      scales: isRadar
+        ? { r: { grid: { color: 'rgba(255,255,255,0.07)' }, ticks: { color: '#7a8ba5', backdropColor: 'transparent', font: { size: 9 } }, pointLabels: { color: '#7a8ba5', font: { size: 10 } } } }
+        : darkScales()
+    }
+  });
+}
+
+// ───── CHART 2: Pizza — horas trabalhadas por dia ─────
+function renderChart2(days, type) {
+  const ctx = document.getElementById('chart2');
   if (charts[2]) charts[2].destroy();
 
-  charts[2] = new Chart(
-    document.getElementById('chart2'),
-    {
-      type:'doughnut',
+  const labels = days.map(d => d.label);
+  const vals   = days.map(d => +d.conducao.toFixed(2));
+  const colors = labels.map((_, i) => PALETTE[i % PALETTE.length]);
 
-      data:{
-        labels:days.map(d=>d.label),
-
-        datasets:[{
-          data:days.map(d=>d.conducao)
-        }]
+  charts[2] = new Chart(ctx, {
+    type,
+    data: {
+      labels,
+      datasets: [{
+        label: 'Horas de Condução',
+        data: vals,
+        backgroundColor: colors.map(c => c + 'cc'),
+        borderColor: colors,
+        borderWidth: 2,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'right',
+          labels: { color: '#7a8ba5', font: { family: 'DM Mono', size: 10 }, padding: 12, boxWidth: 12 }
+        },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const v = ctx.raw;
+              const h = Math.floor(v);
+              const m = Math.round((v - h) * 60);
+              return ` ${h}h ${String(m).padStart(2,'0')}m`;
+            }
+          }
+        }
       },
-
-      options:{
-        responsive:true,
-        maintainAspectRatio:false
-      }
+      scales: (type === 'polarArea')
+        ? { r: { grid: { color: 'rgba(255,255,255,0.06)' }, ticks: { color: '#7a8ba5', backdropColor: 'transparent', font: { size: 9 } } } }
+        : {}
     }
-  );
+  });
+}
 
+// ───── CHART 3: Condução vs Parado ─────
+function renderChart3(days, type) {
+  const ctx = document.getElementById('chart3');
   if (charts[3]) charts[3].destroy();
 
-  charts[3] = new Chart(
-    document.getElementById('chart3'),
-    {
-      type:'line',
+  const labels = days.map(d => d.label);
 
-      data:{
-        labels:days.map(d=>d.label),
-
-        datasets:[
+  let config;
+  if (type === 'pie') {
+    // Aggregate totals for pie
+    const totalC = days.reduce((s, d) => s + d.conducao, 0);
+    const totalP = days.reduce((s, d) => s + d.parado, 0);
+    config = {
+      type: 'pie',
+      data: {
+        labels: ['Condução', 'Parado'],
+        datasets: [{
+          data: [+totalC.toFixed(2), +totalP.toFixed(2)],
+          backgroundColor: ['rgba(42,245,195,0.85)', 'rgba(255,94,125,0.85)'],
+          borderColor: ['#2af5c3', '#ff5e7d'],
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: '#7a8ba5', font: { family: 'DM Mono', size: 11 } } } }
+      }
+    };
+  } else {
+    config = {
+      type,
+      data: {
+        labels,
+        datasets: [
           {
-            label:'Condução',
-            data:days.map(d=>d.conducao)
+            label: 'Condução (h)',
+            data: days.map(d => +d.conducao.toFixed(2)),
+            backgroundColor: 'rgba(42,245,195,0.75)',
+            borderColor: '#2af5c3',
+            borderWidth: type === 'line' ? 2 : 1,
+            fill: false, tension: 0.4,
+            pointBackgroundColor: '#2af5c3',
           },
           {
-            label:'Parado',
-            data:days.map(d=>d.parado)
+            label: 'Parado (h)',
+            data: days.map(d => +d.parado.toFixed(2)),
+            backgroundColor: 'rgba(255,94,125,0.70)',
+            borderColor: '#ff5e7d',
+            borderWidth: type === 'line' ? 2 : 1,
+            fill: false, tension: 0.4,
+            pointBackgroundColor: '#ff5e7d',
           }
         ]
       },
-
-      options:{
-        responsive:true,
-        maintainAspectRatio:false
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: '#7a8ba5', font: { family: 'DM Mono', size: 11 } } } },
+        scales: darkScales()
       }
-    }
-  );
+    };
+  }
+
+  charts[3] = new Chart(ctx, config);
 }
 
-function renderTable(rows) {
+// ───── SWITCH TYPE ─────
+function switchType(chartId, type, btn) {
+  // Update active button
+  document.querySelectorAll(`[data-chart="${chartId}"]`).forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
 
+  if (!parsedData) return;
+
+  const byDay = {};
+  parsedData.forEach(r => {
+    const k = r.data.toISOString().split('T')[0];
+    if (!byDay[k]) byDay[k] = { label: fmtDate(r.data), conducao: 0, parado: 0, dist: 0, duracao: 0, n: 0 };
+    byDay[k].conducao += r.conducao_h;
+    byDay[k].parado   += r.parado_h;
+    byDay[k].dist     += r.distancia;
+    byDay[k].duracao  += r.duracao_h;
+    byDay[k].n++;
+  });
+  const days = Object.values(byDay).sort((a,b) => a.label.localeCompare(b.label));
+
+  if (chartId === 1) renderChart1(days, type);
+  if (chartId === 2) renderChart2(days, type);
+  if (chartId === 3) renderChart3(days, type);
+}
+
+// ───── TABLE ─────
+function renderTable(rows) {
+  const thead = document.querySelector('#dataTable thead');
   const tbody = document.querySelector('#dataTable tbody');
 
-  tbody.innerHTML = rows.map(r => `
-    <tr>
-      <td>${r.data.toLocaleDateString('pt-BR')}</td>
+  thead.innerHTML = `<tr>
+    <th>Data</th>
+    <th>Ativo</th>
+    <th>Início</th>
+    <th>Fim</th>
+    <th>Condução</th>
+    <th>Parado</th>
+    <th>Duração</th>
+    <th>Distância (km)</th>
+    <th>Vel. Média (km/h)</th>
+    <th>Vel. Máx (km/h)</th>
+  </tr>`;
 
-      <td>${r.ativo}</td>
-
-      <td>${r.turno}</td>
-
-      <td>
-        ${
-          r.inicio
-            ? r.inicio.toLocaleTimeString('pt-BR',{
-                hour:'2-digit',
-                minute:'2-digit'
-              })
-            : '—'
-        }
-      </td>
-
-      <td>
-        ${
-          r.fim
-            ? r.fim.toLocaleTimeString('pt-BR',{
-                hour:'2-digit',
-                minute:'2-digit'
-              })
-            : '—'
-        }
-      </td>
-
-      <td>${r.conducao_str}</td>
-
-      <td>${r.parado_str}</td>
-
-      <td>${r.duracao_str}</td>
-
-      <td>${r.distancia.toFixed(2)}</td>
-
-      <td>${r.vel_media.toFixed(1)}</td>
-
-      <td>${r.vel_max}</td>
-    </tr>
-  `).join('');
+  tbody.innerHTML = rows.map(r => `<tr>
+    <td>${r.data.toLocaleDateString('pt-BR')}</td>
+    <td>${r.ativo}</td>
+    <td>${r.inicio ? r.inicio.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '—'}</td>
+    <td>${r.fim    ? r.fim.toLocaleTimeString('pt-BR',   { hour: '2-digit', minute: '2-digit' }) : '—'}</td>
+    <td>${r.conducao_str}</td>
+    <td>${r.parado_str}</td>
+    <td>${r.duracao_str}</td>
+    <td>${r.distancia.toFixed(3)}</td>
+    <td>${r.vel_media.toFixed(1)}</td>
+    <td>${r.vel_max}</td>
+  </tr>`).join('');
 }
 </script>
-
 </body>
 </html>
